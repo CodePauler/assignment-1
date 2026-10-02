@@ -19,6 +19,7 @@ from openai import OpenAI
 
 from assignment.env import Environment
 from assignment.agent.tools import INVOKE_SKILL_TOOL
+import yaml
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -152,6 +153,7 @@ class Agent:
 
         # TODO(1.1.a): Add machinery to maintain agent state as it takes actions
         # and observes the results.
+        self.message_history = []
 
     def load_skills(self, skills_path: Path) -> dict[str, dict[str, str]]:
         """Load the skill folders exposed to this agent."""
@@ -164,7 +166,55 @@ class Agent:
         # ``content`` of the skill file for ``invoke_skill``. Reject duplicate
         # names and malformed or missing frontmatter with a clear
         # ``ValueError``.
-        raise NotImplementedError
+        skills = {}
+        if not skills_path.is_dir():
+            raise ValueError("skills_path not a dir.")
+
+        for skill_dir in skills_path.iterdir():
+            if not skill_dir.is_dir():
+                continue
+
+            skill_file = skill_dir / "SKILL.md"
+            if not skill_file.is_file():
+                raise ValueError(f"Missing {skill_file}.")
+
+            content = skill_file.read_text(encoding="utf-8")
+
+            if not content.startswith("---"):
+                raise ValueError(f"Missing frontmatter in {skill_file}.")
+
+            parts = content.split("---", 2)
+
+            if len(parts) != 3:
+                raise ValueError(f"Invalid frontmatter in {skill_file}.")
+
+            metadata = parts[1]
+            data = yaml.safe_load(metadata)
+            
+            if not data.get("name") or not data.get("description"):
+                raise ValueError(f"Missing name or description in {skill_file}.")
+
+            if not isinstance(data, dict):
+                raise ValueError(f"Invalid frontmatter in {skill_file}.")
+
+            name = data.get("name")
+            description = data.get("description")
+
+            if not all([name, metadata, content]):
+                raise ValueError(f"Missing something in {skill_file}.")
+            if name in skills:
+                raise ValueError(f"Duplicate skills in {skill_file}")
+            metadata = (
+                f"name: {name}\n"
+                f"description: {description}"
+            )
+            skills[name] = {
+                "metadata": metadata,
+                "content": content
+            }
+
+        return skills
+                    
 
     def query_language_model(self) -> dict[str, Any]:
         """Send one tool-enabled Chat Completions request and normalize it."""
@@ -227,7 +277,11 @@ class Agent:
 
         # You want to be careful about which attributes of the class you modify
         # here as they may also be handled by the subclasses.
-        raise NotImplementedError
+        return [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": self.task_prompt},
+            *self.message_history
+        ]
 
     def estimate_active_prompt_tokens(self) -> int:
         """Estimate the next prompt, calibrated by the provider's latest usage."""
@@ -330,13 +384,24 @@ class Agent:
             # step. Ensure you identify when the agent has completed the task
             # by setting `Agent.finished`. If the agent exceeds the
             # `step_limit`, raise `StepLimitError`.
+            while not self.finished:
+                if self.steps_taken >= self.step_limit: 
+                    raise StepLimitError
+
+                response = self.query_language_model()
+                self.message_history.append(response)
+
+                tool_calls = response.get("tool_calls", [])
+                if tool_calls:
+                    tool_results = self.execute_tool_calls(tool_calls)
+                    self.message_history.extend(tool_results)
+
 
             # TODO(2.2) Call `maybe_compact_context()` before each new action
             # request in your shared loop. It already estimates active tokens
             # and handles the threshold, and tracks compaction events for
             # logging.
 
-            raise NotImplementedError
         finally:
             # This block is provided infrastructure. Do not modify it: a
             # trajectory is required even when a run fails.

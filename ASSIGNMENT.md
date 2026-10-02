@@ -1,3 +1,5 @@
+uv run pytest -m "not modal" -vv --tb=no
+
 # Assignment 1: Build an Agent Harness
 
 An agent harness provides the interface that allows a language model (that produces probable strings) to observe and act in an environment. One of the most popular frameworks for building agent harnesses is [ReAct](https://arxiv.org/abs/2210.03629), which interleaves text corresponding to environment observations, reasoning/chain-of-thought, and agent actions in the prompt for a language model. In this assigment, you will build a harness in the ReAct framework.

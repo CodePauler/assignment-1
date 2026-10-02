@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="CMU Agents Assignment 1 中文教程：结合 ASSIGNMENT.md 与 starter code，解释每个 TODO 在 Agent 中的位置、问题、输入与输出。" />
+  <title>Assignment 1 中文教程：从 Starter Code 理解 Agent Harness</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --paper: #ffffff;
+      --ink: #18212f;
+      --muted: #5f6b7a;
+      --line: #dce3ec;
+      --blue: #2357d8;
+      --blue-soft: #eaf0ff;
+      --teal: #087f74;
+      --teal-soft: #e7f7f4;
+      --amber: #9a5b00;
+      --amber-soft: #fff3d9;
+      --red: #b42318;
+      --red-soft: #ffebe8;
+      --purple: #6d3fc0;
+      --purple-soft: #f1eaff;
+      --shadow: 0 14px 36px rgba(24, 33, 47, .08);
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.65;
+    }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+    code { background: #eef2f7; padding: .12rem .35rem; border-radius: 5px; font-size: .92em; }
+    pre {
+      margin: 12px 0 0;
+      padding: 14px 16px;
+      overflow: auto;
+      color: #e8eef8;
+      background: #18212f;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .hero {
+      padding: 64px 24px 46px;
+      color: white;
+      background:
+        radial-gradient(circle at 88% 14%, rgba(94, 234, 212, .24), transparent 22%),
+        radial-gradient(circle at 8% 90%, rgba(147, 197, 253, .22), transparent 27%),
+        linear-gradient(135deg, #15223a 0%, #243f83 56%, #155f71 100%);
+    }
+    .hero-inner { max-width: 1180px; margin: auto; }
+    .eyebrow { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; opacity: .82; }
+    h1 { margin: 10px 0 14px; font-size: clamp(34px, 5vw, 62px); line-height: 1.08; letter-spacing: -.035em; }
+    .subtitle { max-width: 850px; margin: 0; color: #dfe9ff; font-size: 18px; }
+    .hero-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 30px; }
+    .stat { padding: 14px 16px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.08); border-radius: 12px; backdrop-filter: blur(8px); }
+    .stat b { display: block; font-size: 24px; }
+    .stat span { color: #dbe7ff; font-size: 13px; }
+    .layout { max-width: 1320px; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; align-items: start; }
+    .sidebar { position: sticky; top: 16px; padding: 18px; max-height: calc(100vh - 32px); overflow: auto; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .sidebar strong { display: block; margin-bottom: 8px; }
+    .sidebar a { display: block; padding: 7px 9px; color: #3f4a5a; border-radius: 8px; font-size: 14px; }
+    .sidebar a:hover { color: var(--blue); background: var(--blue-soft); text-decoration: none; }
+    .sidebar .sub { padding-left: 20px; font-size: 13px; }
+    main { min-width: 0; }
+    section { scroll-margin-top: 18px; margin-bottom: 24px; }
+    .card { padding: clamp(20px, 3vw, 32px); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+    h2 { margin: 0 0 12px; font-size: 29px; letter-spacing: -.02em; }
+    h3 { margin: 28px 0 10px; font-size: 21px; }
+    h4 { margin: 18px 0 8px; font-size: 16px; }
+    p { margin: 9px 0; }
+    ul, ol { padding-left: 22px; }
+    li + li { margin-top: 5px; }
+    .lead { color: var(--muted); font-size: 17px; }
+    .callout { margin: 16px 0; padding: 14px 16px; border-left: 4px solid var(--blue); background: var(--blue-soft); border-radius: 0 10px 10px 0; }
+    .callout.warn { border-color: #e09b24; background: var(--amber-soft); }
+    .callout.danger { border-color: var(--red); background: var(--red-soft); }
+    .callout.good { border-color: var(--teal); background: var(--teal-soft); }
+    .pill { display: inline-block; margin: 2px 5px 2px 0; padding: 3px 9px; border-radius: 999px; background: var(--blue-soft); color: #1745b0; font-size: 12px; font-weight: 800; }
+    .pill.part2 { background: var(--purple-soft); color: var(--purple); }
+    .pill.part3 { background: var(--teal-soft); color: var(--teal); }
+    .grid-2, .grid-3, .io-grid { display: grid; gap: 14px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .io-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .mini { padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: #fbfcfe; }
+    .mini h4 { margin-top: 0; }
+    .mini.location { border-top: 4px solid var(--blue); }
+    .mini.problem { border-top: 4px solid var(--amber); }
+    .mini.input { border-top: 4px solid var(--purple); }
+    .mini.output { border-top: 4px solid var(--teal); }
+    .flow { display: grid; grid-template-columns: repeat(7, minmax(100px, 1fr)); gap: 8px; align-items: center; overflow-x: auto; padding: 8px 0; }
+    .node { min-height: 76px; display: grid; place-items: center; padding: 10px; text-align: center; background: #f7f9fc; border: 1px solid var(--line); border-radius: 12px; font-size: 13px; font-weight: 750; }
+    .arrow { text-align: center; color: var(--blue); font-size: 24px; font-weight: bold; }
+    .arch { display: grid; grid-template-columns: 1fr 90px 1fr; gap: 10px; align-items: stretch; }
+    .arch-col { display: grid; gap: 10px; }
+    .arch-box { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fbfcfe; }
+    .arch-center { display: grid; place-items: center; padding: 10px; color: white; background: linear-gradient(180deg, #2357d8, #153d9f); border-radius: 14px; text-align: center; font-weight: 800; writing-mode: vertical-rl; }
+    .todo { margin-top: 18px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: white; }
+    .todo > summary { cursor: pointer; padding: 17px 19px; list-style: none; font-weight: 850; background: #f8faff; }
+    .todo > summary::-webkit-details-marker { display: none; }
+    .todo > summary::after { content: "＋"; float: right; color: var(--blue); }
+    .todo[open] > summary::after { content: "－"; }
+    .todo-body { padding: 0 19px 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 14px; }
+    th, td { padding: 10px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: #f0f4f9; }
+    .filemap td:first-child, .filemap th:first-child { white-space: nowrap; }
+    .checklist { display: grid; gap: 8px; padding: 0; list-style: none; }
+    .checklist label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fbfcfe; }
+    .checklist input { margin-top: 5px; accent-color: var(--teal); }
+    .muted { color: var(--muted); }
+    .small { font-size: 13px; }
+    .tag-red { color: var(--red); font-weight: 800; }
+    .footer { max-width: 1180px; margin: 20px auto 50px; padding: 0 24px; color: var(--muted); font-size: 13px; }
+    @media (max-width: 1020px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: relative; top: 0; max-height: none; columns: 2; }
+      .hero-grid, .io-grid { grid-template-columns: repeat(2, 1fr); }
+      .grid-3 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 680px) {
+      .hero { padding-top: 42px; }
+      .layout { padding: 12px; }
+      .sidebar { columns: 1; }
+      .hero-grid, .grid-2, .grid-3, .io-grid { grid-template-columns: 1fr; }
+      .arch { grid-template-columns: 1fr; }
+      .arch-center { writing-mode: horizontal-tb; }
+      .flow { grid-template-columns: 1fr; }
+      .arrow { transform: rotate(90deg); }
+    }
+    @media print {
+      body { background: white; }
+      .hero { color: black; background: white; border-bottom: 2px solid #222; }
+      .subtitle, .stat span { color: #333; }
+      .stat { border-color: #bbb; }
+      .layout { display: block; max-width: none; padding: 0; }
+      .sidebar { display: none; }
+      .card { box-shadow: none; break-inside: avoid; }
+      details { break-inside: avoid; }
+      details:not([open]) > *:not(summary) { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="eyebrow">CMU Agents · Assignment 1 · Starter Code Guide</div>
+      <h1>从 Starter Code 理解<br>Agent Harness</h1>
+      <p class="subtitle">这份教程不直接给出作业代码，而是回答四个问题：每个 TODO 位于 Agent 的哪一层、解决什么问题、接收什么输入、应该产生什么输出。</p>
+      <div class="hero-grid">
+        <div class="stat"><b>3</b><span>Part：Coding、Compaction、Chess</span></div>
+        <div class="stat"><b>13</b><span>核心 TODO / 功能点</span></div>
+        <div class="stat"><b>100</b><span>总分，按功能独立评分</span></div>
+        <div class="stat"><b>11 / 4</b><span>当前离线基线：失败 / 通过</span></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar" aria-label="教程目录">
+      <strong>目录</strong>
+      <a href="#goal">1. 作业究竟在做什么</a>
+      <a href="#architecture">2. 整体架构</a>
+      <a href="#starter">3. Starter Code 地图</a>
+      <a href="#react">4. ReAct 数据流</a>
+      <a href="#part1">5. Part 1：CodeAgent</a>
+      <a class="sub" href="#todo-11a">1.1.a Prompt 状态</a>
+      <a class="sub" href="#todo-11b">1.1.b Code Prompt</a>
+      <a class="sub" href="#todo-12">1.2 ReAct Loop</a>
+      <a class="sub" href="#todo-13">1.3 Coding Tools</a>
+      <a class="sub" href="#todo-14">1.4 Skills</a>
+      <a href="#part2">6. Part 2：Compaction</a>
+      <a href="#part3">7. Part 3：ChessAgent</a>
+      <a href="#tests">8. 测试与验收</a>
+      <a href="#deliverables">9. 提交物</a>
+      <a href="#order">10. 推荐完成顺序</a>
+    </nav>
+
+    <main>
+      <section id="goal" class="card">
+        <h2>1. 作业究竟在做什么</h2>
+        <p class="lead">你不是在“写一个会修 Bug 或会下棋的模型”，而是在写模型外部的 <strong>Agent Harness（代理运行框架）</strong>。</p>
+        <div class="callout good"><strong>一句话：</strong>LLM 只负责产生下一步“可能的动作”；你的 Harness 负责保存状态、提供工具、执行动作、返回环境观察，并决定何时停止。</div>
+        <div class="grid-3">
+          <div class="mini"><h4>Part 1 · 能行动</h4><p>实现通用 ReAct 循环，让 <code>CodeAgent</code> 可以在远程终端中观察代码、运行命令、修改文件并提交 patch。</p></div>
+          <div class="mini"><h4>Part 2 · 能长跑</h4><p>当历史过长时，把旧交互压缩成 working memory，同时保持消息协议合法和最近动作完整。</p></div>
+          <div class="mini"><h4>Part 3 · 能迁移</h4><p>复用同一套基类循环，仅更换 prompt 与工具，把 Agent 从“修代码”迁移为“下棋”。</p></div>
+        </div>
+        <h3>最终的能力链</h3>
+        <div class="flow" aria-label="作业能力链">
+          <div class="node">问题描述<br><span class="muted">user task</span></div><div class="arrow">→</div>
+          <div class="node">LLM 生成动作<br><span class="muted">assistant</span></div><div class="arrow">→</div>
+          <div class="node">Harness 执行工具<br><span class="muted">action</span></div><div class="arrow">→</div>
+          <div class="node">环境返回结果<br><span class="muted">observation</span></div>
+        </div>
+      </section>
+
+      <section id="architecture" class="card">
+        <h2>2. 整体架构：哪些是通用层，哪些是领域层</h2>
+        <div class="arch">
+          <div class="arch-col">
+            <div class="arch-box"><strong>CodeAgent</strong><br><span class="muted">领域 prompt、execute/send_message 分发、软件任务</span></div>
+            <div class="arch-box"><strong>ChessAgent</strong><br><span class="muted">棋盘 prompt、play/simulate/python 分发、游戏状态</span></div>
+          </div>
+          <div class="arch-center">继承与复用</div>
+          <div class="arch-col">
+            <div class="arch-box"><strong>Agent 基类</strong><br><span class="muted">消息历史、build_prompt、ReAct loop、step limit、日志与 cleanup</span></div>
+            <div class="arch-box"><strong>Environment / ChessSandbox</strong><br><span class="muted">真正执行命令或承载棋局的外部环境</span></div>
+          </div>
+        </div>
+        <div class="callout warn"><strong>设计边界：</strong><code>Agent.run()</code> 只能在基类实现一次。子类只负责“有什么工具、怎么执行工具、初始 prompt 是什么”。这正是作业强调 domain-agnostic 的原因。</div>
+      </section>
+
+      <section id="starter" class="card">
+        <h2>3. Starter Code 地图</h2>
+        <table class="filemap">
+          <thead><tr><th>文件</th><th>在系统中的角色</th><th>你主要需要关注的内容</th></tr></thead>
+          <tbody>
+            <tr><td><code>agent/base.py</code></td><td>通用 Agent 内核</td><td>状态历史、prompt 构造、上下文压缩、ReAct 循环、trajectory 保存。</td></tr>
+            <tr><td><code>agent/code_agent.py</code></td><td>软件工程领域适配器</td><td>CodeAgent 的系统/任务 prompt；<code>execute</code>、<code>send_message</code>、<code>invoke_skill</code> 的调度。</td></tr>
+            <tr><td><code>agent/chess_agent.py</code></td><td>棋类领域适配器</td><td>初始棋局 observation、棋盘格式化、工具注册、游戏结束状态维护。</td></tr>
+            <tr><td><code>agent/tools.py</code></td><td>LLM 可见的工具接口</td><td>JSON Schema。它描述“模型应该怎样调用工具”，不是工具执行本身。</td></tr>
+            <tr><td><code>agent/chess_tools.py</code></td><td>棋类工具执行函数</td><td>参数解析、HTTP 请求、sandbox Python、错误转为可恢复 observation。</td></tr>
+            <tr><td><code>env.py</code></td><td>通用远程执行环境</td><td><code>Environment.execute()</code> 是 CodeAgent 动作落地的位置。</td></tr>
+            <tr><td><code>chess_sandbox.py</code></td><td>棋局部署与 API 入口</td><td>启动修复后的 chess server，向 ChessAgent 提供 URL 与环境。</td></tr>
+            <tr><td><code>prompts.py</code></td><td>已提供的领域指令</td><td>棋类系统 prompt 与 programmatic tools 的说明。</td></tr>
+            <tr><td><code>sandbox_python.py</code></td><td>安全运行模型生成代码</td><td>在 sandbox 内暴露 chess tools，避免在本地 Agent 进程执行模型代码。</td></tr>
+            <tr><td><code>cli.py</code> / <code>Makefile</code></td><td>运行入口</td><td>连接任务、环境、Agent、输出 artifacts；也是理解端到端数据流的好入口。</td></tr>
+            <tr><td><code>tests/</code></td><td>公开契约</td><td>告诉你消息结构、错误恢复、工具 schema、状态更新应满足哪些可观察行为。</td></tr>
+          </tbody>
+        </table>
+        <p class="small muted">注意：<code>tests/</code>、<code>tasks/</code>、<code>chess_app/</code> 不应作为作业实现区域修改；特别是 Part 1 要让 Agent 在隔离环境中生成 patch，而不是你直接修本地 submodule。</p>
+      </section>
+
+      <section id="react" class="card">
+        <h2>4. ReAct 的消息与状态数据流</h2>
+        <p>OpenAI Chat Completions 接口看到的不是一个拼接字符串，而是一组有顺序的消息：</p>
+        <pre>system  → 持久规则、环境说明、skill catalog
+user    → 当前任务 + 初始 observation
+assistant → 模型推理结果与 tool_calls
+tool      → 每个 tool_call 对应的执行结果
+assistant → 下一轮动作
+...</pre>
+        <div class="grid-2">
+          <div class="mini"><h4>必须保持的协议</h4><ul><li>第一条是唯一的 <code>system</code>。</li><li>在第一次 assistant 之前有 <code>user</code>。</li><li>每个 tool observation 带原始 <code>tool_call_id</code>。</li><li>一次 assistant 的多个 tool calls 都要有对应结果。</li><li>文本型 assistant 回复也要保留，不能把历史弄断。</li></ul></div>
+          <div class="mini"><h4>Harness 需要保存的状态</h4><ul><li>原始 system/task prompt。</li><li>每轮 assistant action。</li><li>每个动作产生的 tool observations。</li><li><code>finished</code>、<code>steps_taken</code>。</li><li>压缩后的 working memory 与最近完整步骤。</li></ul></div>
+        </div>
+        <div class="callout"><strong>理解重点：</strong><code>build_prompt()</code> 是状态的“视图”；<code>run()</code> 是状态转换的“控制器”；<code>execute_tool_calls()</code> 是模型动作与真实环境之间的“适配器”。</div>
+      </section>
+
+      <section id="part1" class="card">
+        <span class="pill">PART 1</span>
+        <h2>5. CodeAgent：建立通用 Agent Harness</h2>
+        <p class="lead">Part 1 的实现结果不仅服务于代码修复，也会被 Part 3 的 ChessAgent 原样复用。</p>
+
+        <details id="todo-11a" class="todo" open>
+          <summary>TODO 1.1.a — Agent 状态与 build_prompt</summary>
+          <div class="todo-body">
+            <div class="io-grid">
+              <div class="mini location"><h4>位于哪里</h4><p><code>src/assignment/agent/base.py</code> 的构造函数与 <code>build_prompt()</code>。</p></div>
+              <div class="mini problem"><h4>解决什么</h4><p>LLM API 本身无记忆。Harness 必须把先前动作与观察重新放入下一次请求。</p></div>
+              <div class="mini input"><h4>输入</h4><p><code>system_prompt</code>、<code>task_prompt</code>、历史 assistant 消息、tool observations、可选 working memory。</p></div>
+              <div class="mini output"><h4>输出</h4><p>合法的 <code>list[dict]</code> 消息序列，供 <code>query_language_model()</code> 直接提交。</p></div>
+            </div>
+            <h4>你要设计的状态边界</h4>
+            <ul><li>状态应该是 domain-agnostic：不能假设工具一定是 shell 或棋步。</li><li>保存完整 assistant 消息，包括文本、reasoning 字段和 tool calls 中 grader 需要的结构。</li><li>tool result 必须紧跟并关联产生它的 assistant tool call。</li><li>不要把 <code>api_prompts</code>/<code>api_responses</code> 当活跃历史；它们是审计记录。</li></ul>
+            <p><strong>公开测试提示：</strong><code>test_prompt_carries_task_action_and_result</code> 会检查第二轮 prompt 是否仍含任务、前一动作和结果；长输出还需经过已提供的 <code>format_tool_output()</code> 截断。</p>
+          </div>
+        </details>
+
+        <details id="todo-11b" class="todo">
+          <summary>TODO 1.1.b — CodeAgent 的 system prompt 与 task prompt</summary>
+          <div class="todo-body">
+            <div class="io-grid">
+              <div class="mini location"><h4>位于哪里</h4><p><code>agent/code_agent.py::__init__</code>。</p></div>
+              <div class="mini problem"><h4>解决什么</h4><p>把通用 Agent 放进“软件工程终端任务”的语境，并告诉模型它所在的操作系统与工作目录。</p></div>
+              <div class="mini input"><h4>输入</h4><p>用户任务文本、<code>Environment</code> 暴露的 machine/release/system/version/cwd、skill metadata。</p></div>
+              <div class="mini output"><h4>输出</h4><p>两个字符串属性：长期规则的 <code>system_prompt</code> 与本次问题的 <code>task_prompt</code>。</p></div>
+            </div>
+            <ul><li>system prompt 必须原样包含作业规定的 <code>&lt;system_information&gt;</code> JSON block。</li><li>如果加载了 skills，只暴露名称与描述，不把完整正文塞进 prompt。</li><li>没有 skill 时，prompt 不能泄漏 <code>patch.txt</code> 提交流程。</li><li>task prompt 应让模型知道具体 issue，而不是混入 Harness 的实现细节。</li></ul>
+          </div>
+        </details>
+
+        <details id="todo-12" class="todo">
+          <summary>TODO 1.2 — 共享 ReAct Loop</summary>
+          <div class="todo-body">
+            <div class="io-grid">
+              <div class="mini location"><h4>位于哪里</h4><p><code>agent/base.py::run()</code>。</p></div>
+              <div class="mini problem"><h4>解决什么</h4><p>持续驱动“请求动作 → 执行动作 → 记录观察”，直到领域层声明完成或预算耗尽。</p></div>
+              <div class="mini input"><h4>输入</h4><p>当前 Agent 状态、工具定义、LLM 响应、<code>step_limit</code>、子类 dispatcher。</p></div>
+              <div class="mini output"><h4>输出</h4><p>更新后的历史、<code>finished</code> 状态、trajectory 文件；超限时抛 <code>StepLimitError</code>。</p></div>
+            </div>
+            <h4>控制流程应覆盖</h4>
+            <ol><li>在每个新动作请求前考虑 context compaction。</li><li>检查是否还允许调用模型。</li><li>调用 <code>query_language_model()</code> 并保存 assistant message。</li><li>如果有 tool calls，交给子类 <code>execute_tool_calls()</code>。</li><li>把所有 tool observations 追加到历史。</li><li>如果回复没有可解析工具，仍保留它并继续，而不是直接丢失。</li><li>无论成功、异常还是超限，都执行既有 trajectory 保存与环境 cleanup。</li></ol>
+            <div class="callout danger"><strong>常见错误：</strong>在 <code>CodeAgent.run()</code> 和 <code>ChessAgent.run()</code> 分别复制循环；这会破坏本作业验证“同一个 Harness 跨领域复用”的目标。</div>
+          </div>
+        </details>
+
+        <details id="todo-13" class="todo">
+          <summary>TODO 1.3 — execute / send_message 工具执行</summary>
+          <div class="todo-body">
+            <div class="io-grid">
+              <div class="mini location"><h4>位于哪里</h4><p><code>agent/code_agent.py::execute_tool_calls()</code>，schema 在 <code>agent/tools.py</code>。</p></div>
+              <div class="mini problem"><h4>解决什么</h4><p>把模型声明的 JSON tool call 变成远程终端动作或最终用户消息。</p></div>
+              <div class="mini input"><h4>输入</h4><p>一组 tool-call dictionaries；每项含 id、函数名、JSON 字符串 arguments。</p></div>
+              <div class="mini output"><h4>输出</h4><p>一组 <code>role: tool</code> 消息，每项带相同的 <code>tool_call_id</code> 和字符串 observation。</p></div>
+            </div>
+            <table><thead><tr><th>工具</th><th>动作</th><th>完成语义</th></tr></thead><tbody>
+              <tr><td><code>execute</code></td><td>解析 command/cwd/timeout/env/shell，并通过 <code>Environment.execute()</code> 运行。</td><td>不结束任务；格式化 returncode、output 等结果供下一轮观察。</td></tr>
+              <tr><td><code>send_message</code></td><td>读取 summary，作为 Agent 对用户的最终提交说明。</td><td>设置 <code>finished = True</code>；提交后不能继续工作。</td></tr>
+              <tr><td><code>invoke_skill</code></td><td>按名称返回已经加载的完整 SKILL.md。</td><td>不结束任务；只是把更详细方法加入上下文。</td></tr>
+            </tbody></table>
+            <ul><li>Malformed JSON、参数类型错误、未知工具都应变成 recoverable observation。</li><li>一次响应可能有多个 calls，不能只处理第一个。</li><li>错误调用绝不能偷偷执行默认命令。</li><li>工具输出可能很长，应使用已提供的格式化/截断逻辑。</li></ul>
+          </div>
+        </details>
+
+        <details id="todo-14" class="todo">
+          <summary>TODO 1.4 — Skill Discovery 与 Progressive Disclosure</summary>
+          <div class="todo-body">
+            <div class="io-grid">
+              <div class="mini location"><h4>位于哪里</h4><p><code>agent/base.py::load_skills()</code>；CodeAgent prompt 与 dispatcher 使用结果。</p></div>
+              <div class="mini problem"><h4>解决什么</h4><p>允许 Agent 拥有很多可复用工作流，但默认只看到小型目录，需要时再加载完整内容。</p></div>
+              <div class="mini input"><h4>输入</h4><p>一个父目录；每个直接子目录应包含一个带 YAML frontmatter 的 <code>SKILL.md</code>。</p></div>
+              <div class="mini output"><h4>输出</h4><p>以 frontmatter <code>name</code> 为 key 的 mapping；每项有精简 metadata 与完整 content。</p></div>
+            </div>
+            <h4>校验职责</h4><ul><li>路径存在且是目录。</li><li>每个候选 skill 的 frontmatter 完整、可解析，并含必需字段。</li><li>skill 名称不能重复。</li><li>system prompt 只列 metadata，<code>invoke_skill</code> 才返回完整正文。</li><li>仅在确有 skills 时注册 <code>INVOKE_SKILL_TOOL</code>。</li></ul>
+            <div class="callout"><strong>在整个 Agent 中的位置：</strong>skill 是 prompt 与工具之间的桥梁——目录先进入 system prompt，正文再通过 tool observation 进入历史。</div>
+          </div>
+        </details>
+
+        <h3>Part 1 的真实任务链</h3>
+        <ol><li>CLI 读取 <code>tasks/chess-terminal-move/problem_statement.md</code>。</li><li>在 Modal testbed 的 <code>/testbed</code> 中启动 CodeAgent。</li><li>Agent 自己复现、定位、修改和测试 chess app bug。</li><li>Agent 调用 submit skill，创建并验证 <code>patch.txt</code>。</li><li>宿主从 sandbox 读取 patch，保存为 <code>artifacts/fix.patch</code>。</li><li><code>make check-part1</code> 在全新 testbed 重放 patch，避免“只在当前环境碰巧成功”。</li></ol>
+      </section>
+
+      <section id="part2" class="card">
+        <span class="pill part2">PART 2</span>
+        <h2>6. Context Compaction：让 Agent 在长任务中保持有效记忆</h2>
+        <p class="lead">压缩不是“删除旧消息”，而是把旧前缀转换为可审计的 working memory，同时保留原始指令和最近完整工具步骤。</p>
+
+        <details class="todo" open>
+          <summary>TODO 2.1 — compact_context</summary>
+          <div class="todo-body">
+            <div class="io-grid">
+              <div class="mini location"><h4>位于哪里</h4><p><code>agent/base.py::COMPACTION_SYSTEM_PROMPT</code> 与 <code>compact_context()</code>。</p></div>
+              <div class="mini problem"><h4>解决什么</h4><p>旧 transcript 成本不断增长，并会挤出目标、约束和最新状态。</p></div>
+              <div class="mini input"><h4>输入</h4><p>当前活跃 prompt 中可压缩的旧前缀，以及 compaction 模型 token 上限。</p></div>
+              <div class="mini output"><h4>输出</h4><p>模型生成的事实型摘要，并更新 Agent 状态，使后续 <code>build_prompt()</code> 变短。</p></div>
+            </div>
+            <h4>Working memory 必须保留</h4>
+            <p>目标、硬性约束、已查看/编辑文件、运行过的命令、具体结果、失败尝试、测试结果、阻塞点、下一步动作。</p>
+            <h4>绝不能破坏</h4>
+            <ul><li>原始 system 与 task 消息保持逐字不变。</li><li>至少保留最近 N 个完整 assistant 步骤及其全部 tool observations。</li><li>不能只留下孤立 tool 消息或丢失 tool-call 配对。</li><li>不能修改 <code>api_prompts</code> / <code>api_responses</code>；它们是完整审计记录。</li><li>压缩后活跃 prompt 应实质缩短，而不是把原文换个包装复制一遍。</li></ul>
+          </div>
+        </details>
+
+        <details class="todo">
+          <summary>TODO 2.2 — 在共享循环中触发 compaction</summary>
+          <div class="todo-body">
+            <div class="io-grid">
+              <div class="mini location"><h4>位于哪里</h4><p><code>agent/base.py::run()</code> 调用已提供的 <code>maybe_compact_context()</code>。</p></div>
+              <div class="mini problem"><h4>解决什么</h4><p>压缩必须发生在“下一次模型请求之前”，否则无法降低该请求的上下文。</p></div>
+              <div class="mini input"><h4>输入</h4><p>估算 token 数、阈值、保留最近步骤数、现有 transcript。</p></div>
+              <div class="mini output"><h4>输出</h4><p>可能更新的活跃状态，以及追加到 <code>compaction_events</code> 的审计事件。</p></div>
+            </div>
+            <p><code>maybe_compact_context()</code> 已经负责阈值判断、prompt 前后快照和事件记录；你的循环负责在正确时机调用它。</p>
+          </div>
+        </details>
+
+        <h3>Part 2 还有一个实验交付物</h3>
+        <p>对同一个 SWE-bench 实例分别运行：</p>
+        <ul><li><strong>Full context baseline：</strong><code>COMPACT_THRESHOLD=0</code>。</li><li><strong>Compacted：</strong><code>COMPACT_THRESHOLD=6000</code>，且至少触发一次压缩。</li></ul>
+        <p>比较两条 trajectory 的 prompt/token 使用、步骤数、压缩收益和可能的信息损失，写入 <code>artifacts/token-usage-analysis.md</code>。这部分考察的不只是实现，也考察你对 Agent context trade-off 的理解。</p>
+      </section>
+
+      <section id="part3" class="card">
+        <span class="pill part3">PART 3</span>
+        <h2>7. ChessAgent：证明同一 Harness 可以换领域</h2>
+        <p class="lead">ChessAgent 继承 Part 1/2 的循环。不同之处只在领域 prompt、工具 schema、工具执行和完成条件。</p>
+
+        <details class="todo" open>
+          <summary>TODO 3.1.a — 定义 play_move 工具 schema</summary>
+          <div class="todo-body"><div class="io-grid">
+            <div class="mini location"><h4>位于哪里</h4><p><code>agent/tools.py::PLAY_MOVE_TOOL</code>，在 <code>ChessAgent.__init__</code> 注册。</p></div>
+            <div class="mini problem"><h4>解决什么</h4><p>告诉模型工具叫什么、能做什么、参数必须是什么形状。</p></div>
+            <div class="mini input"><h4>输入</h4><p>无运行时输入；你定义 OpenAI function-tool JSON schema。</p></div>
+            <div class="mini output"><h4>输出</h4><p>strict schema：唯一必填字符串参数 <code>move</code>，使用 UCI notation，拒绝额外字段。</p></div>
+          </div><p>Schema 是模型的“动作语法”。它越明确，非法或含糊调用越少；但 schema 本身不执行棋步。</p></div>
+        </details>
+
+        <details class="todo">
+          <summary>TODO 3.1.b — 执行 play_move 并维护 live state</summary>
+          <div class="todo-body"><div class="io-grid">
+            <div class="mini location"><h4>位于哪里</h4><p><code>chess_tools.py::_play_move()</code> 与 <code>chess_agent.py::execute_tool_calls()</code>。</p></div>
+            <div class="mini problem"><h4>解决什么</h4><p>把 UCI 动作发给服务器，并将 Black 自动回复后的新棋局变成下一轮 observation。</p></div>
+            <div class="mini input"><h4>输入</h4><p>HTTP client、原始 JSON arguments；dispatcher 还接收 call id。</p></div>
+            <div class="mini output"><h4>输出</h4><p>格式化棋盘状态或 <code>&lt;chess_error&gt;</code>；更新 <code>last_state</code> 与 <code>finished</code>。</p></div>
+          </div>
+          <ul><li>成功：POST <code>/api/move</code>，序列化返回状态，展示棋盘/FEN/历史/下一步 legal moves。</li><li>失败：JSON 错误、类型错误、非法棋步、网络错误都必须可恢复。</li><li>服务器会自动走 Black；Agent 永远只提交 White 的动作。</li><li>一组并行调用里最多执行一个会改变棋局的 move，其余应拒绝，防止基于同一旧状态连续落子。</li></ul></div>
+        </details>
+
+        <details class="todo">
+          <summary>Observation A/B Experiment — legal moves 是否应直接提供</summary>
+          <div class="todo-body">
+            <p>这不是代码 TODO，但属于评分。你要对两个模型分别运行“仅棋盘”和“棋盘 + legal moves”，共四次。</p>
+            <div class="grid-2"><div class="mini"><h4>记录输入条件</h4><p>模型、是否省略 legal moves、trajectory/result 文件名。</p></div><div class="mini"><h4>记录输出指标</h4><p><code>play_move</code> 总调用数、非法调用数、非法率、是否到达 <code>game_over: true</code>。</p></div></div>
+            <p>报告写入 <code>artifacts/observation-experiment.md</code>。目标不是证明某个固定结论，而是用 trajectory 证据分析工具 observation 对 Agent 行为的影响。</p>
+          </div>
+        </details>
+
+        <details class="todo">
+          <summary>TODO 3.3.a / 3.3.b — simulate_move</summary>
+          <div class="todo-body"><div class="io-grid">
+            <div class="mini location"><h4>位于哪里</h4><p>Schema 在 <code>agent/tools.py</code>；执行在 <code>chess_tools.py::_simulate_move()</code>；dispatcher 在 <code>chess_agent.py</code>。</p></div>
+            <div class="mini problem"><h4>解决什么</h4><p>让 Agent 在不改变真实棋局的情况下检查局面或试走一步，支持 lookahead。</p></div>
+            <div class="mini input"><h4>输入</h4><p>必填完整 FEN 字符串；可选 UCI <code>move</code>。</p></div>
+            <div class="mini output"><h4>输出</h4><p>模拟后的 JSON：fen、squares、turn、legal_moves、terminal fields；错误为 chess_error。</p></div>
+          </div>
+          <div class="callout good"><strong>关键语义：</strong>它是纯查询/模拟工具，不能修改 live board，也不应改写 <code>last_state</code>。这与 <code>play_move</code> 的副作用形成清晰边界。</div></div>
+        </details>
+
+        <details class="todo">
+          <summary>TODO 3.4 — run_python：Programmatic Tool Calling</summary>
+          <div class="todo-body"><div class="io-grid">
+            <div class="mini location"><h4>位于哪里</h4><p><code>agent/tools.py::RUN_PYTHON_TOOL</code>、<code>chess_tools.py::_run_python()</code>、ChessAgent dispatcher。</p></div>
+            <div class="mini problem"><h4>解决什么</h4><p>模型可以写循环、搜索或评分逻辑，并像普通函数一样调用 simulate/play，而不必手工发很多 tool calls。</p></div>
+            <div class="mini input"><h4>输入</h4><p>字符串 <code>code</code>、chess server port、sandbox environment。</p></div>
+            <div class="mini output"><h4>输出</h4><p>runner 的 JSON 字符串：stdout、stderr、error；随后附上重新读取的 live board。</p></div>
+          </div>
+          <ul><li>模型代码必须在 sandbox 中运行，绝不能在本地 Agent 进程 <code>exec</code>。</li><li>代码通过 base64 传给 <code>/opt/assignment/sandbox_python.py</code>，避免 shell quoting 问题。</li><li>runner 命令非零表示基础设施失败，应包装为 chess_error。</li><li>snippet 内 Python exception 是一次成功启动 runner 后的用户代码错误，应留在返回 JSON 的 <code>error</code> 字段。</li><li>snippet 可能已经调用 <code>play_move</code>；结束后必须重读 live state，更新 finished，防止下一轮重复落子。</li></ul></div>
+        </details>
+
+        <details class="todo">
+          <summary>TODO 3.5 — ChessAgent 中的 invoke_skill</summary>
+          <div class="todo-body"><div class="io-grid">
+            <div class="mini location"><h4>位于哪里</h4><p><code>chess_tools.py::_invoke_skill()</code>，注册逻辑继承自基类 skills 加载结果。</p></div>
+            <div class="mini problem"><h4>解决什么</h4><p>把“如何用 Python 搜索并选择棋步”的策略按需交给模型。</p></div>
+            <div class="mini input"><h4>输入</h4><p>已加载 skills mapping 与 JSON 参数中的 skill name。</p></div>
+            <div class="mini output"><h4>输出</h4><p>指定 skill 的完整 content，或可恢复的 chess_error。</p></div>
+          </div>
+          <p>最终 trajectory 要展示工具协同：<strong>invoke_skill → run_python → 代码中 simulate_move 搜索 → 代码中 play_move 一次提交</strong>。只读 skill 后逐回合直接 play_move 不满足这一目标。</p></div>
+        </details>
+      </section>
+
+      <section id="tests" class="card">
+        <h2>8. 测试与验收：公开测试在检查什么</h2>
+        <p>当前 starter code 在非 Modal 测试中为 <strong>11 failed、4 passed、4 deselected</strong>。这正是预期起点：失败集中在学生 TODO。</p>
+        <table><thead><tr><th>测试类别</th><th>可观察契约</th><th>常见失败原因</th></tr></thead><tbody>
+          <tr><td>Prompt history</td><td>任务、assistant action、tool result 在下一步仍然存在且顺序合法。</td><td>只保存字符串、不保留 tool_calls；tool_call_id 丢失。</td></tr>
+          <tr><td>Long output</td><td>超长观察被截断，但头尾信息与省略提示仍在。</td><td>绕过提供的格式化函数；把完整日志塞满 context。</td></tr>
+          <tr><td>Compaction</td><td>旧步骤变摘要，最近完整 action/tool pair 保留，prompt 变短。</td><td>摘要替换了 system/task；留下孤立 tool 消息。</td></tr>
+          <tr><td>Skills</td><td>catalog 只有名称/描述；invoke 后才出现完整正文。</td><td>启动时暴露 skill body；frontmatter 校验不足。</td></tr>
+          <tr><td>Step limit</td><td>预算耗尽抛 <code>StepLimitError</code>，同时保存日志并 cleanup。</td><td>多调用一次模型；异常路径跳过 finally。</td></tr>
+          <tr><td>Malformed/unknown tools</td><td>不执行危险动作，错误作为 observation 回给模型。</td><td><code>json.loads</code> 异常直接终止 run。</td></tr>
+          <tr><td>Chess schema/state</td><td>strict schema、POST payload、棋盘格式、last_state/finished 更新。</td><td>schema 接受 extra fields；未使用原始 call id。</td></tr>
+        </tbody></table>
+        <h3>运行层级</h3>
+        <div class="grid-3">
+          <div class="mini"><h4>快速离线</h4><pre>make test</pre><p class="small">先用它迭代数据结构与错误处理，不消耗 API/Modal。</p></div>
+          <div class="mini"><h4>环境检查</h4><pre>make doctor</pre><p class="small">在 billable run 前检查 submodule、Modal auth、模型 endpoint。</p></div>
+          <div class="mini"><h4>端到端</h4><pre>make run-code-agent
+make check-part1</pre><p class="small">验证 Agent 真能生成可重放 patch，而非仅通过 unit tests。</p></div>
+        </div>
+      </section>
+
+      <section id="deliverables" class="card">
+        <h2>9. 最终需要产出的内容</h2>
+        <table><thead><tr><th>阶段</th><th>主要 artifact</th><th>它证明什么</th></tr></thead><tbody>
+          <tr><td>Part 1</td><td><code>artifacts/fix.patch</code><br><code>artifacts/part1-trajectory.json</code></td><td>CodeAgent 能修复目标 issue，并保留完整行动证据。</td></tr>
+          <tr><td>Part 2</td><td>compacted patch/trajectory、baseline patch/trajectory、<code>token-usage-analysis.md</code></td><td>压缩确实触发、降低上下文，并分析成本/信息的 trade-off。</td></tr>
+          <tr><td>Part 3 basic</td><td><code>part3-trajectory.json</code><br><code>game-result.json</code></td><td>ChessAgent 能通过 play_move 达到终局。</td></tr>
+          <tr><td>Part 3 A/B</td><td>四组 trajectory/result、<code>observation-experiment.md</code></td><td>合法步 observation 如何影响不同模型的非法率与完成率。</td></tr>
+          <tr><td>Part 3 programmatic</td><td><code>part3-python-skill-trajectory.json</code></td><td>skill、Python、simulate 与 live move 能形成一条协作链。</td></tr>
+          <tr><td>Submission</td><td>作业要求的归档/代码与可解析 artifacts</td><td>全部文件命名、格式与规则符合 grader。</td></tr>
+        </tbody></table>
+        <div class="callout danger"><strong>安全规则：</strong>不要把 <code>.env</code>、API key、provider credential 写进 trajectory、教程、patch 或提交归档。</div>
+      </section>
+
+      <section id="order" class="card">
+        <h2>10. 推荐完成顺序</h2>
+        <p>下面的顺序按照依赖关系安排，避免同时调试太多层：</p>
+        <ol>
+          <li><strong>先建立 Agent 历史模型：</strong>构造函数状态 + <code>build_prompt()</code>。</li>
+          <li><strong>再完成 CodeAgent 最小适配：</strong>system/task prompt + tools 注册。</li>
+          <li><strong>实现 coding dispatcher：</strong>先 execute，再 send_message，再错误恢复。</li>
+          <li><strong>实现共享 run loop：</strong>让 prompt → action → observation 真正转起来。</li>
+          <li><strong>补 skills：</strong>load、catalog、invoke，然后完成 Part 1 真实 patch。</li>
+          <li><strong>加入 compaction：</strong>先写摘要状态转换，再把触发点接到 run loop。</li>
+          <li><strong>实现 Chess 最小闭环：</strong>play_move schema/helper/dispatcher/state update。</li>
+          <li><strong>做 observation A/B：</strong>在添加更强工具前固定基础对照条件。</li>
+          <li><strong>添加 simulate_move：</strong>先保证无副作用和错误恢复。</li>
+          <li><strong>添加 run_python 与 chess skill：</strong>最后组合 programmatic workflow。</li>
+          <li><strong>集中检查 artifacts：</strong>文件存在、JSON 可解析、trajectory 证据满足要求。</li>
+        </ol>
+        <h3>可勾选清单</h3>
+        <ul class="checklist" id="progress-list">
+          <li><label><input type="checkbox" data-key="p1"><span>Prompt 始终包含原始 system/task，并携带合法 action-observation 历史。</span></label></li>
+          <li><label><input type="checkbox" data-key="p2"><span>Malformed JSON 与 unknown tool 都不会终止 Agent，也不会误执行。</span></label></li>
+          <li><label><input type="checkbox" data-key="p3"><span>ReAct loop 在成功、异常、step limit 三种路径都保存 trajectory 并清理环境。</span></label></li>
+          <li><label><input type="checkbox" data-key="p4"><span>Skill catalog 只暴露 metadata，完整正文只能通过 invoke_skill 获取。</span></label></li>
+          <li><label><input type="checkbox" data-key="p5"><span>Compaction 保留最近完整步骤，压缩后活跃 prompt 明显变短。</span></label></li>
+          <li><label><input type="checkbox" data-key="p6"><span>play_move 改变 live state；simulate_move 不改变 live state。</span></label></li>
+          <li><label><input type="checkbox" data-key="p7"><span>run_python 只在 sandbox 中执行，并在结束后刷新真实棋局。</span></label></li>
+          <li><label><input type="checkbox" data-key="p8"><span>所有实验报告和 trajectory 使用不同文件名，且不含 credentials。</span></label></li>
+        </ul>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <p>依据仓库中的 <code>ASSIGNMENT.md</code>、starter code、公开测试与任务配置整理。生成日期：2026-09-29。本文刻意解释接口契约与设计职责，不提供 TODO 的直接实现代码。</p>
+  </footer>
+
+  <script>
+    (() => {
+      const boxes = document.querySelectorAll('#progress-list input[type="checkbox"]');
+      boxes.forEach(box => {
+        const key = 'assignment1-tutorial-' + box.dataset.key;
+        box.checked = localStorage.getItem(key) === '1';
+        box.addEventListener('change', () => localStorage.setItem(key, box.checked ? '1' : '0'));
+      });
+    })();
+  </script>
+</body>
+</html>
