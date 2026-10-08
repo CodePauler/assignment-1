@@ -31,8 +31,13 @@ MAX_OBSERVATION_CHARS = 10_000
 # TODO(Part 2): Write instructions that make the model produce concise working
 # memory for a software agent. The prompt should preserve concrete progress,
 # failures, test results, constraints, and next steps without copying raw output.
-COMPACTION_SYSTEM_PROMPT = ""
-
+COMPACTION_SYSTEM_PROMPT = (
+    "Create concise, factual working memory for a software agent. "
+    "Preserve the objective, constraints, relevant files, commands, edits, "
+    "concrete results, failed approaches, test results, blockers, and the "
+    "next action. Do not copy large raw outputs or invent information. "
+    "Output only the working memory."
+)
 
 class StepLimitError(Exception):
     """Raised when an agent exhausts its model-call budget."""
@@ -319,9 +324,42 @@ class Agent:
         # with all linked tool observations. The resulting summary should change
         # what `build_prompt` emits, and reduce the length of the prompt.
 
-        raise NotImplementedError
-
         compaction_prompt = []
+        compaction_prompt.append({
+            "role": "system",
+            "content": COMPACTION_SYSTEM_PROMPT
+        })
+
+        total_assistant_step = 0
+        for message in self.message_history:
+            if message.get("role") == "assistant":
+                total_assistant_step += 1
+
+        old_messages = []
+        recent_messages = []
+        current_assistant_step = 0
+        for message in self.message_history:
+            if message.get("role") == "assistant":
+                current_assistant_step += 1
+
+            # only summarize the old prefix
+            if current_assistant_step > total_assistant_step - self.compaction_keep_recent_steps:
+                recent_messages.append(message)
+                continue
+
+            old_messages.append(message)
+
+        compaction_prompt.append({
+            "role": "user",
+            "content": (
+                "Original agent instructions:\n"
+                f"{self.system_prompt}\n"
+                "Original task:\n"
+                f"{self.task_prompt}"
+                "Older interaction history to summarize:\n"
+                f"{json.dumps(old_messages, ensure_ascii=False)}"
+            ),
+        })
 
         ### Do not modify this section ###
         compaction_response = self.client.chat.completions.create(
@@ -334,6 +372,14 @@ class Agent:
 
         # Use `compaction_response` to update what `build_prompt` emits, but
         # DO NOT modify the object itself. Let the method return it unchanged.
+
+        self.message_history = [
+            {
+                "role": "user",
+                "content": compaction_response.choices[0].message.content
+            },
+            *recent_messages
+        ]
 
         ### Do not modify this section ###
         return compaction_prompt, compaction_response.model_dump(mode="json")
@@ -388,6 +434,7 @@ class Agent:
                 if self.steps_taken >= self.step_limit: 
                     raise StepLimitError
 
+                self.maybe_compact_context()
                 response = self.query_language_model()
                 self.message_history.append(response)
 
