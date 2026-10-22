@@ -106,9 +106,9 @@ class ChessAgent(Agent):
             compaction_max_tokens=compaction_max_tokens,
         )
 
-        # TODO(Part 3): Register the play_move tool schema from tools.py.
-
+        self.tools.append(PLAY_MOVE_TOOL)
         if programmatic_tools:
+            self.tools.append(SIMULATE_MOVE_TOOL)
             self.tools.append(RUN_PYTHON_TOOL)
 
         # run_python always executes in the sandbox, on the port the chess
@@ -161,20 +161,112 @@ class ChessAgent(Agent):
     def execute_tool_calls(
         self, tool_calls: list[dict[str, Any]]
     ) -> list[dict[str, str]]:
-        """Execute model-generated ``play_move`` calls against the chess API."""
+        """Execute model-generated calls against the chess API."""
 
-        # TODO(Part 3.1):
-        # 1. Dispatch on the function name, and ignore a tool this agent did
-        #    not register.
-        # 2. Hand the raw arguments to the matching chess_tools helper, with
-        #    self.chess_client as its first argument. Each helper takes the
-        #    client explicitly so the same code can run inside the sandbox.
-        # 3. Format a played move with self.format_state, then update
-        #    last_state and finished.
-        # 4. Link every observation to its call with tool_call_id.
-        # 5. Turn malformed, unknown, rejected, or extra parallel calls into
-        #    recoverable <chess_error> observations instead of crashing.
+        registered_tools = {
+            tool.get("function", {}).get("name")
+            for tool in self.tools
+            if isinstance(tool, dict)
+        }
+        has_played = False
+        tool_messages: list[dict[str, str]] = []
 
-        # TODO(Part 3.3-4): add cases for simulate_move and run_python, with
-        # linked observations and recoverable errors, just like the old tool.
-        raise NotImplementedError
+        def error(tool_call_id: str, message: str) -> dict[str, str]:
+            return {
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "content": f"<chess_error>{message}</chess_error>",
+            }
+
+        for tool_call in tool_calls:
+            if not isinstance(tool_call, dict):
+                tool_messages.append(error("unknown", "tool_call should be a dict."))
+                continue
+
+            tool_call_id = tool_call.get("id")
+            if not isinstance(tool_call_id, str) or not tool_call_id:
+                tool_messages.append(error("unknown", "tool_call is missing an id."))
+                continue
+
+            function = tool_call.get("function")
+            if not isinstance(function, dict):
+                tool_messages.append(
+                    error(tool_call_id, "function should be a dict.")
+                )
+                continue
+
+            tool_name = function.get("name")
+            if not isinstance(tool_name, str) or tool_name not in registered_tools:
+                tool_messages.append(
+                    error(tool_call_id, f"Unknown tool: {tool_name}")
+                )
+                continue
+
+            if self.finished:
+                tool_messages.append(
+                    error(tool_call_id, "The game is already over.")
+                )
+                continue
+
+            arguments = function.get("arguments")
+
+            if tool_name == "play_move":
+                if has_played:
+                    tool_messages.append(
+                        error(
+                            tool_call_id,
+                            "Only one play_move may be executed per turn.",
+                        )
+                    )
+                    continue
+                has_played = True
+
+                state = _play_move(client=self.chess_client, arguments=arguments)
+                if state.startswith("<chess_error>"):
+                    observation = state
+                else:
+                    parsed_state = json.loads(state)
+                    self.last_state = parsed_state
+                    self.finished = bool(parsed_state.get("game_over"))
+                    observation = self.format_state(parsed_state)
+
+            elif tool_name == "simulate_move":
+                state = _simulate_move(
+                    client=self.chess_client, arguments=arguments
+                )
+                if state.startswith("<chess_error>"):
+                    observation = state
+                else:
+                    observation = self.format_state(json.loads(state))
+
+            elif tool_name == "run_python":
+                observation = _run_python(
+                    env=self.env,
+                    port=self.python_sandbox_port,
+                    arguments=arguments,
+                )
+
+                state = _game_state(client=self.chess_client)
+                self.last_state = state
+                self.finished = bool(state.get("game_over"))
+                observation = f"{observation}\n\n{self.format_state(state)}"
+
+            elif tool_name == "invoke_skill":
+                observation = _invoke_skill(
+                    skills=self.skills, arguments=arguments
+                )
+
+            else:
+                observation = (
+                    f"<chess_error>Tool {tool_name} is not implemented.</chess_error>"
+                )
+
+            tool_messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call_id,
+                    "content": observation,
+                }
+            )
+
+        return tool_messages

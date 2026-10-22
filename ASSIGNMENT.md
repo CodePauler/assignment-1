@@ -285,7 +285,7 @@ You should post the request using `ChessAgent.chess_client`.
 
 With the ability to simulate moves on the board, the agent can now engage in more complex forms of planning. Being able to execute code will allow the agent to more reliably execute the plans it comes up with, and you will enable this with programmatic tool calling. Define and register `RUN_PYTHON_TOOL`, implement `_run_python`, and add it to the dispatcher. The model supplies `run_python(code)`, and the snippet can call `simulate_move` and `play_move` as ordinary synchronous Python functions.
 
-> **TODO(3.4)**
+> **TODO(3.4)** 
 > Parse the arguments and run the code in the sandbox with the registered tools available by name. `/opt/assignment/sandbox_python.py` is a script on the `env` sandbox that has access to the same tool definitions in this file. Use it to run the code that the model produced as an argument to the run_python tool. The script accepts two positional arguments -- `port` and a base64-encoded string of code (to prevent issues with quoting). Implement this tool call.
 > The script prints one JSON object with `stdout`, `stderr`, and `error` from running the code -- return that string as it is. A non-zero returncode means the sandbox itself failed, not the model's code. Report `exception_info` or `stderr` as a <chess_error>. 
 > Return <chess_error>{message}</chess_error> if there are issues like type mismatches or parsing failures.
