@@ -171,51 +171,49 @@ class Agent:
         # ``content`` of the skill file for ``invoke_skill``. Reject duplicate
         # names and malformed or missing frontmatter with a clear
         # ``ValueError``.
-        skills = {}
         if not skills_path.is_dir():
-            raise ValueError("skills_path not a dir.")
+            raise ValueError(f"skills_path is not a directory: {skills_path}")
 
-        for skill_dir in skills_path.iterdir():
+        skills: dict[str, dict[str, str]] = {}
+        for skill_dir in sorted(skills_path.iterdir()):
             if not skill_dir.is_dir():
                 continue
 
             skill_file = skill_dir / "SKILL.md"
             if not skill_file.is_file():
-                raise ValueError(f"Missing {skill_file}.")
+                raise ValueError(f"Missing skill file: {skill_file}")
 
             content = skill_file.read_text(encoding="utf-8")
-
             if not content.startswith("---"):
-                raise ValueError(f"Missing frontmatter in {skill_file}.")
+                raise ValueError(f"Missing YAML frontmatter in {skill_file}")
 
-            parts = content.split("---", 2)
+            try:
+                _, frontmatter, _ = content.split("---", 2)
+            except ValueError as exc:
+                raise ValueError(
+                    f"Malformed YAML frontmatter in {skill_file}"
+                ) from exc
 
-            if len(parts) != 3:
-                raise ValueError(f"Invalid frontmatter in {skill_file}.")
-
-            metadata = parts[1]
-            data = yaml.safe_load(metadata)
-            
-            if not data.get("name") or not data.get("description"):
-                raise ValueError(f"Missing name or description in {skill_file}.")
+            try:
+                data = yaml.safe_load(frontmatter)
+            except yaml.YAMLError as exc:
+                raise ValueError(f"Malformed YAML frontmatter in {skill_file}") from exc
 
             if not isinstance(data, dict):
-                raise ValueError(f"Invalid frontmatter in {skill_file}.")
+                raise ValueError(f"Malformed YAML frontmatter in {skill_file}")
 
             name = data.get("name")
             description = data.get("description")
-
-            if not all([name, metadata, content]):
-                raise ValueError(f"Missing something in {skill_file}.")
+            if not isinstance(name, str) or not name.strip():
+                raise ValueError(f"Missing skill name in {skill_file}")
+            if not isinstance(description, str) or not description.strip():
+                raise ValueError(f"Missing skill description in {skill_file}")
             if name in skills:
-                raise ValueError(f"Duplicate skills in {skill_file}")
-            metadata = (
-                f"name: {name}\n"
-                f"description: {description}"
-            )
+                raise ValueError(f"Duplicate skill name '{name}' in {skill_file}")
+
             skills[name] = {
-                "metadata": metadata,
-                "content": content
+                "metadata": f"name: {name}\ndescription: {description}",
+                "content": content,
             }
 
         return skills

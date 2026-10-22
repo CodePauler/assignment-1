@@ -133,10 +133,77 @@ INVOKE_SKILL_TOOL = {
 # TODO(3.1.a): Define an OpenAI function-tool schema named ``play_move``.
 # It must accept exactly one required string argument named ``move``, explain
 # that moves use UCI notation (for example e2e4), and reject extra arguments.
-PLAY_MOVE_TOOL: dict = {}
+PLAY_MOVE_TOOL: dict = {
+    "type": "function",
+    "function": {
+        "name": "play_move",
+        "description": (
+            "Play one move for White using UCI notation, such as "
+            "e2e4 or the promotion move e7e8q."
+            ),
+        "strict": True,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "move": {
+                        "type": "string",
+                        "description": "move for this step. Use UCI notation (for example e2e4)."
+                }
+            },
+            "required": ["move"],
+            "additionalProperties": False
+        }
+    }
+}
 
 # TODO(3.3): Define the `simulate_move` tool, like the `play_move` tool.
-SIMULATE_MOVE_TOOL: dict = {}
+SIMULATE_MOVE_TOOL: dict = {
+    "type": "function",
+    "function": {
+        "name": "simulate_move",
+        "description": (
+                "Inspect a complete six-field FEN or simulate exactly one legal UCI move "
+                "for the side to move, White or Black. Does not change the live game "
+                "or automatically play an opponent reply."
+            ),
+        "strict": True,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "fen": {
+                        "type": "string",
+                        "description": "the current state."
+                    },
+                "move": {
+                        "type": ["string", "null"],
+                        "description": "move for this step. Use UCI notation (for example e2e4). None to get the current state and eligible moves."
+                    }
+            },
+            "required": ["fen", "move"],
+            "additionalProperties": False
+        }
+    }
+}
 
 # TODO()
-RUN_PYTHON_TOOL: dict = {}
+RUN_PYTHON_TOOL: dict = {
+    "type": "function",
+    "function": {
+        "name": "run_python",
+        "description": (
+            "Write code and run the code in the sandbox with the registered tools available by name."
+        ),
+        "strict": True,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "description": "code to run."
+                }
+            },
+            "required": ["code"],
+            "additionalProperties": False
+        }
+    }
+}

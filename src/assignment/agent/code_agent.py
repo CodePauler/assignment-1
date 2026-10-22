@@ -95,6 +95,11 @@ class CodeAgent(Agent):
         # response!). Malformed JSON and unknown tools must become recoverable
         # observations relayed to the agent instead of exceptions.
         
+        registered_tools = {
+            tool.get("function", {}).get("name")
+            for tool in self.tools
+            if isinstance(tool, dict)
+        }
         tool_messages = []
 
         for tool_call in tool_calls:
@@ -135,6 +140,14 @@ class CodeAgent(Agent):
 
 
             tool_name = function.get("name", "unknown")
+            if tool_name not in registered_tools:
+                tool_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call_id,
+                    "content": f"<tool_error>Unknown tool:{tool_name}</tool_error>"
+                })
+                continue
+
             raw_arguments = function.get("arguments")
 
             try:
